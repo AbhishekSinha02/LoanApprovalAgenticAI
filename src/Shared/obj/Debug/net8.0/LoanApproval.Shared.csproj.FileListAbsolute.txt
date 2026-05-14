@@ -1,0 +1,12 @@
+C:\aiPrj\LoanApprovalAgenticAI\src\Shared\obj\Debug\net8.0\LoanApproval.Shared.GeneratedMSBuildEditorConfig.editorconfig
+C:\aiPrj\LoanApprovalAgenticAI\src\Shared\obj\Debug\net8.0\LoanApproval.Shared.AssemblyInfoInputs.cache
+C:\aiPrj\LoanApprovalAgenticAI\src\Shared\obj\Debug\net8.0\LoanApproval.Shared.AssemblyInfo.cs
+C:\aiPrj\LoanApprovalAgenticAI\src\Shared\obj\Debug\net8.0\LoanApproval.Shared.csproj.CoreCompileInputs.cache
+C:\aiPrj\LoanApprovalAgenticAI\src\Shared\obj\Debug\net8.0\LoanApproval.Shared.sourcelink.json
+C:\aiPrj\LoanApprovalAgenticAI\src\Shared\bin\Debug\net8.0\LoanApproval.Shared.deps.json
+C:\aiPrj\LoanApprovalAgenticAI\src\Shared\bin\Debug\net8.0\LoanApproval.Shared.dll
+C:\aiPrj\LoanApprovalAgenticAI\src\Shared\bin\Debug\net8.0\LoanApproval.Shared.pdb
+C:\aiPrj\LoanApprovalAgenticAI\src\Shared\obj\Debug\net8.0\LoanApproval.Shared.dll
+C:\aiPrj\LoanApprovalAgenticAI\src\Shared\obj\Debug\net8.0\refint\LoanApproval.Shared.dll
+C:\aiPrj\LoanApprovalAgenticAI\src\Shared\obj\Debug\net8.0\LoanApproval.Shared.pdb
+C:\aiPrj\LoanApprovalAgenticAI\src\Shared\obj\Debug\net8.0\ref\LoanApproval.Shared.dll
