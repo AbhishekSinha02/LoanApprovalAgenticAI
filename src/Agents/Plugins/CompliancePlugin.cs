@@ -18,7 +18,7 @@ public sealed class CompliancePlugin(ILogger<CompliancePlugin> logger)
         [Description("SHA-256 hash of SSN (never the raw SSN)")] string ssnHash,
         [Description("Applicant age in years")] int applicantAge)
     {
-        logger.LogInformation("Running KYC for applicant {Name}", fullName);
+        logger.LogDebug("[PLUGIN:Compliance] RunKycCheckAsync ← name={Name}, dob={DOB}, age={Age}", fullName, dateOfBirth, applicantAge);
         await Task.Delay(40); // simulate external call
 
         var issues = new List<string>();
@@ -32,13 +32,15 @@ public sealed class CompliancePlugin(ILogger<CompliancePlugin> logger)
         if (string.IsNullOrWhiteSpace(fullName) || fullName.Split(' ').Length < 2)
             issues.Add("Full name could not be verified (missing surname).");
 
-        return JsonSerializer.Serialize(new
+        var kycResult = JsonSerializer.Serialize(new
         {
             kycPass = issues.Count == 0,
             identityVerified = issues.Count == 0,
             issues,
             verifiedAt = DateTime.UtcNow
         });
+        logger.LogDebug("[PLUGIN:Compliance] RunKycCheckAsync → {Result}", kycResult);
+        return kycResult;
     }
 
     [KernelFunction, Description("Run AML (Anti-Money Laundering) OFAC/sanctions watchlist screening.")]
@@ -46,11 +48,11 @@ public sealed class CompliancePlugin(ILogger<CompliancePlugin> logger)
         [Description("Applicant full name")] string fullName,
         [Description("Applicant residential address")] string applicantAddress)
     {
-        logger.LogInformation("Running AML screening for {Name}", fullName);
+        logger.LogDebug("[PLUGIN:Compliance] RunAmlScreeningAsync ← name={Name}, address={Address}", fullName, applicantAddress);
         await Task.Delay(60); // simulate OFAC API call
 
         // Production: call Treasury OFAC SDN list / Dow Jones Watchlist / LexisNexis
-        return JsonSerializer.Serialize(new
+        var amlResult = JsonSerializer.Serialize(new
         {
             amlPass = true,
             watchlistMatch = false,
@@ -59,6 +61,8 @@ public sealed class CompliancePlugin(ILogger<CompliancePlugin> logger)
             screeningProvider = "OFAC-SDN",
             screenedAt = DateTime.UtcNow
         });
+        logger.LogDebug("[PLUGIN:Compliance] RunAmlScreeningAsync → {Result}", amlResult);
+        return amlResult;
     }
 
     [KernelFunction, Description("Check fair lending compliance per ECOA and Fair Housing Act — ensures decision factors are not discriminatory.")]
@@ -66,6 +70,7 @@ public sealed class CompliancePlugin(ILogger<CompliancePlugin> logger)
         [Description("List of factors used in the decision, comma-separated")] string decisionFactors,
         [Description("Loan type")] string loanType)
     {
+        logger.LogDebug("[PLUGIN:Compliance] CheckFairLendingCompliance ← factors={Factors}, type={Type}", decisionFactors, loanType);
         // Protected characteristics that must NEVER appear in decision logic
         var prohibitedFactors = new[]
         {
@@ -76,7 +81,7 @@ public sealed class CompliancePlugin(ILogger<CompliancePlugin> logger)
         var lowerFactors = decisionFactors.ToLower();
         var violations = prohibitedFactors.Where(f => lowerFactors.Contains(f)).ToList();
 
-        return JsonSerializer.Serialize(new
+        var fairResult = JsonSerializer.Serialize(new
         {
             ecoaCompliant = violations.Count == 0,
             violations,
@@ -87,6 +92,8 @@ public sealed class CompliancePlugin(ILogger<CompliancePlugin> logger)
             },
             checkedAt = DateTime.UtcNow
         });
+        logger.LogDebug("[PLUGIN:Compliance] CheckFairLendingCompliance → {Result}", fairResult);
+        return fairResult;
     }
 
     [KernelFunction, Description("Verify HMDA (Home Mortgage Disclosure Act) reporting requirements for applicable loans.")]
@@ -94,16 +101,21 @@ public sealed class CompliancePlugin(ILogger<CompliancePlugin> logger)
         [Description("Loan type")] string loanType,
         [Description("Property address if mortgage or home equity loan; empty otherwise")] string propertyAddress)
     {
+        logger.LogDebug("[PLUGIN:Compliance] CheckHmdaRequirements ← type={Type}, propertyAddress={Addr}", loanType, propertyAddress);
         var hmdaApplicable = loanType.ToLower() is "mortgage" or "homeequityloan";
 
         if (!hmdaApplicable)
-            return JsonSerializer.Serialize(new { hmdaRequired = false, loanType });
+        {
+            var r = JsonSerializer.Serialize(new { hmdaRequired = false, loanType });
+            logger.LogDebug("[PLUGIN:Compliance] CheckHmdaRequirements → {Result}", r);
+            return r;
+        }
 
         var missingFields = new List<string>();
         if (string.IsNullOrWhiteSpace(propertyAddress))
             missingFields.Add("Property address is required for HMDA reporting.");
 
-        return JsonSerializer.Serialize(new
+        var hmdaResult = JsonSerializer.Serialize(new
         {
             hmdaRequired = true,
             hmdaCompliant = missingFields.Count == 0,
@@ -111,6 +123,8 @@ public sealed class CompliancePlugin(ILogger<CompliancePlugin> logger)
             reportingCategory = "Covered Loan",
             checkedAt = DateTime.UtcNow
         });
+        logger.LogDebug("[PLUGIN:Compliance] CheckHmdaRequirements → {Result}", hmdaResult);
+        return hmdaResult;
     }
 
     [KernelFunction, Description("Validate basic loan eligibility rules (age, income floor, minimum credit score policy).")]
@@ -121,6 +135,8 @@ public sealed class CompliancePlugin(ILogger<CompliancePlugin> logger)
         [Description("Requested loan amount")] decimal loanAmount,
         [Description("Loan type")] string loanType)
     {
+        logger.LogDebug("[PLUGIN:Compliance] ValidateLoanEligibility ← age={Age}, income={Income}, credit={Credit}, loan={Loan}, type={Type}",
+            applicantAge, annualIncome, creditScore, loanAmount, loanType);
         var violations = new List<string>();
 
         if (applicantAge < 18)
@@ -136,11 +152,13 @@ public sealed class CompliancePlugin(ILogger<CompliancePlugin> logger)
         if (loanAmount > annualIncome * 10)
             violations.Add("Requested loan amount exceeds 10× annual income — policy limit breached.");
 
-        return JsonSerializer.Serialize(new
+        var eligResult = JsonSerializer.Serialize(new
         {
             eligible = violations.Count == 0,
             violations,
             checkedAt = DateTime.UtcNow
         });
+        logger.LogDebug("[PLUGIN:Compliance] ValidateLoanEligibility → {Result}", eligResult);
+        return eligResult;
     }
 }

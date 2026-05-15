@@ -1,12 +1,13 @@
 using System.Text.Json;
 using FluentAssertions;
 using LoanApproval.Agents.Plugins;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LoanApproval.Tests.Unit.Plugins;
 
 public class RiskAssessmentPluginTests
 {
-    private readonly RiskAssessmentPlugin _plugin = new();
+    private readonly RiskAssessmentPlugin _plugin = new(NullLogger<RiskAssessmentPlugin>.Instance);
 
     [Fact]
     public void CalculateRiskScore_ExcellentProfile_ReturnsLowRisk()

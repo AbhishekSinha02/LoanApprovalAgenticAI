@@ -20,16 +20,18 @@ internal sealed class LoanAgentSelectionStrategy : SelectionStrategy
         AgentNames.LoanOfficer
     ];
 
+    // Stateful counter: each BuildGroupChat() creates a new strategy instance,
+    // so this counter is per-request and never shared across requests.
+    private int _nextIndex;
+
     protected override Task<Agent> SelectAgentAsync(
         IReadOnlyList<Agent> agents,
         IReadOnlyList<ChatMessageContent> history,
         CancellationToken cancellationToken)
     {
-        // Count assistant messages already in history to find the next agent's turn
-        var completedTurns = history.Count(m => m.Role == AuthorRole.Assistant);
-        var nextIndex = completedTurns % AgentPipeline.Length;
+        var nextName = AgentPipeline[_nextIndex % AgentPipeline.Length];
+        _nextIndex++;
 
-        var nextName = AgentPipeline[nextIndex];
         var selected = agents.FirstOrDefault(a => a.Name == nextName)
             ?? throw new InvalidOperationException($"Agent '{nextName}' not found in the group chat.");
 

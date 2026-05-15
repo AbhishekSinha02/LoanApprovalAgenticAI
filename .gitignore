@@ -1,0 +1,26 @@
+# Build outputs
+bin/
+obj/
+
+# Log files
+logs/
+*.log
+
+# Local secrets / environment
+.env
+.env.local
+*.env.local
+
+# NuGet
+*.nupkg
+.nuget/
+
+# VS / Rider
+.vs/
+.idea/
+*.user
+*.suo
+
+# OS
+.DS_Store
+Thumbs.db

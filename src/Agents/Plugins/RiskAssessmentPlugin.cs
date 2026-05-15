@@ -1,10 +1,11 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 
 namespace LoanApproval.Agents.Plugins;
 
-public sealed class RiskAssessmentPlugin
+public sealed class RiskAssessmentPlugin(ILogger<RiskAssessmentPlugin> logger)
 {
     [KernelFunction, Description("Calculate a composite risk score (0–100, lower = less risky) from key applicant metrics.")]
     public string CalculateRiskScore(
@@ -14,6 +15,9 @@ public sealed class RiskAssessmentPlugin
         [Description("Loan type (e.g. Mortgage, PersonalLoan, AutoLoan)")] string loanType,
         [Description("Loan-to-value ratio as a percentage; 0 if no collateral")] decimal ltvRatio)
     {
+        logger.LogDebug("[PLUGIN:Risk] CalculateRiskScore ← creditScore={Score}, dti={DTI}%, yearsEmployed={Years}, type={Type}, ltv={LTV}%",
+            creditScore, dtiRatio, yearsEmployed, loanType, ltvRatio);
+
         // Credit score component (weight 40%)
         var creditComponent = creditScore switch
         {
@@ -70,12 +74,14 @@ public sealed class RiskAssessmentPlugin
             _ => "VeryHigh"
         };
 
-        return JsonSerializer.Serialize(new
+        var result = JsonSerializer.Serialize(new
         {
             riskScore,
             riskLevel,
             components = new { creditComponent, dtiComponent, employmentComponent, ltvComponent }
         });
+        logger.LogDebug("[PLUGIN:Risk] CalculateRiskScore → {Result}", result);
+        return result;
     }
 
     [KernelFunction, Description("Determine the suggested interest rate based on the risk profile.")]
@@ -84,6 +90,9 @@ public sealed class RiskAssessmentPlugin
         [Description("Loan type")] string loanType,
         [Description("Loan term in months")] int termMonths)
     {
+        logger.LogDebug("[PLUGIN:Risk] DetermineInterestRate ← riskScore={Score}, type={Type}, term={Term}mo",
+            riskScore, loanType, termMonths);
+
         // Base rates by loan type (approximate current market rates)
         var baseRate = loanType.ToLower() switch
         {
@@ -109,13 +118,15 @@ public sealed class RiskAssessmentPlugin
 
         var finalRate = Math.Round(baseRate + riskPremium + termAdjustment, 2);
 
-        return JsonSerializer.Serialize(new
+        var result = JsonSerializer.Serialize(new
         {
             suggestedRate = finalRate,
             baseRate,
             riskPremium,
             termAdjustment
         });
+        logger.LogDebug("[PLUGIN:Risk] DetermineInterestRate → {Result}", result);
+        return result;
     }
 
     [KernelFunction, Description("Evaluate the loan-to-value ratio for secured loans.")]
@@ -124,13 +135,20 @@ public sealed class RiskAssessmentPlugin
         [Description("Appraised collateral value; 0 for unsecured loans")] decimal collateralValue,
         [Description("Loan type")] string loanType)
     {
+        logger.LogDebug("[PLUGIN:Risk] EvaluateLoanToValue ← loanAmount={Loan}, collateral={Collateral}, type={Type}",
+            loanAmount, collateralValue, loanType);
+
         if (collateralValue <= 0)
-            return JsonSerializer.Serialize(new
+        {
+            var r0 = JsonSerializer.Serialize(new
             {
                 ltvRatio = 0,
                 assessment = "Unsecured loan — no collateral",
                 pass = true
             });
+            logger.LogDebug("[PLUGIN:Risk] EvaluateLoanToValue → {Result}", r0);
+            return r0;
+        }
 
         var ltvRatio = Math.Round(loanAmount / collateralValue * 100, 2);
         var maxLtv = loanType.ToLower() switch
@@ -141,7 +159,7 @@ public sealed class RiskAssessmentPlugin
             _ => 80m
         };
 
-        return JsonSerializer.Serialize(new
+        var result = JsonSerializer.Serialize(new
         {
             ltvRatio,
             maxAllowedLtv = maxLtv,
@@ -150,5 +168,7 @@ public sealed class RiskAssessmentPlugin
                 ? $"LTV {ltvRatio}% is within the {maxLtv}% limit"
                 : $"LTV {ltvRatio}% exceeds the {maxLtv}% maximum — loan amount must be reduced"
         });
+        logger.LogDebug("[PLUGIN:Risk] EvaluateLoanToValue → {Result}", result);
+        return result;
     }
 }

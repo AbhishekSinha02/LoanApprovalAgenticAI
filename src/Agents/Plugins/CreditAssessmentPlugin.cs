@@ -1,10 +1,11 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 
 namespace LoanApproval.Agents.Plugins;
 
-public sealed class CreditAssessmentPlugin
+public sealed class CreditAssessmentPlugin(ILogger<CreditAssessmentPlugin> logger)
 {
     [KernelFunction, Description("Calculate monthly payment for a loan.")]
     public string CalculateMonthlyPayment(
@@ -12,10 +13,15 @@ public sealed class CreditAssessmentPlugin
         [Description("Annual interest rate as a percentage (e.g. 6.5)")] decimal annualRatePercent,
         [Description("Loan term in months")] int termMonths)
     {
+        logger.LogDebug("[PLUGIN:Credit] CalculateMonthlyPayment ← principal={Principal}, rate={Rate}%, term={Term}mo",
+            principal, annualRatePercent, termMonths);
+
         if (annualRatePercent <= 0)
         {
             var flat = Math.Round(principal / termMonths, 2);
-            return JsonSerializer.Serialize(new { monthlyPayment = flat, totalCost = flat * termMonths });
+            var result0 = JsonSerializer.Serialize(new { monthlyPayment = flat, totalCost = flat * termMonths });
+            logger.LogDebug("[PLUGIN:Credit] CalculateMonthlyPayment → {Result}", result0);
+            return result0;
         }
 
         var monthlyRate = annualRatePercent / 100m / 12m;
@@ -23,12 +29,14 @@ public sealed class CreditAssessmentPlugin
                     / ((decimal)Math.Pow(1 + (double)monthlyRate, termMonths) - 1));
         var payment = Math.Round((decimal)factor * principal, 2);
 
-        return JsonSerializer.Serialize(new
+        var result = JsonSerializer.Serialize(new
         {
             monthlyPayment = payment,
             totalCost = Math.Round(payment * termMonths, 2),
             totalInterest = Math.Round(payment * termMonths - principal, 2)
         });
+        logger.LogDebug("[PLUGIN:Credit] CalculateMonthlyPayment → {Result}", result);
+        return result;
     }
 
     [KernelFunction, Description("Calculate debt-to-income ratio and assess its risk.")]
@@ -37,6 +45,9 @@ public sealed class CreditAssessmentPlugin
         [Description("Existing monthly debt obligations")] decimal existingMonthlyDebt,
         [Description("Proposed new monthly loan payment")] decimal proposedPayment)
     {
+        logger.LogDebug("[PLUGIN:Credit] CalculateDebtToIncomeRatio ← monthlyIncome={Income}, existingDebt={Existing}, newPayment={New}",
+            monthlyIncome, existingMonthlyDebt, proposedPayment);
+
         if (monthlyIncome <= 0)
             return JsonSerializer.Serialize(new { error = "Monthly income must be positive." });
 
@@ -54,13 +65,16 @@ public sealed class CreditAssessmentPlugin
 
         var pass = dtiRatio < 43;
 
-        return JsonSerializer.Serialize(new { dtiRatio, assessment, pass, totalMonthlyDebt = totalDebt });
+        var result = JsonSerializer.Serialize(new { dtiRatio, assessment, pass, totalMonthlyDebt = totalDebt });
+        logger.LogDebug("[PLUGIN:Credit] CalculateDebtToIncomeRatio → {Result}", result);
+        return result;
     }
 
     [KernelFunction, Description("Evaluate a credit score and return a risk category with recommendation.")]
     public string EvaluateCreditScore(
         [Description("FICO credit score (300–850)")] int creditScore)
     {
+        logger.LogDebug("[PLUGIN:Credit] EvaluateCreditScore ← creditScore={Score}", creditScore);
         var (category, recommendation, riskPremium) = creditScore switch
         {
             >= 800 => ("Exceptional", "Approve — lowest rate tier", 0m),
@@ -71,7 +85,7 @@ public sealed class CreditAssessmentPlugin
             _ => ("Very Poor", "Decline — does not meet minimum credit requirements", 0m)
         };
 
-        return JsonSerializer.Serialize(new
+        var result = JsonSerializer.Serialize(new
         {
             creditScore,
             category,
@@ -79,6 +93,8 @@ public sealed class CreditAssessmentPlugin
             riskPremiumPercent = riskPremium,
             meetsMinimum = creditScore >= 580
         });
+        logger.LogDebug("[PLUGIN:Credit] EvaluateCreditScore → {Result}", result);
+        return result;
     }
 
     [KernelFunction, Description("Assess loan affordability relative to income and requested amount.")]
@@ -88,6 +104,8 @@ public sealed class CreditAssessmentPlugin
         [Description("Loan type")] string loanType,
         [Description("Monthly payment calculated for the loan")] decimal monthlyPayment)
     {
+        logger.LogDebug("[PLUGIN:Credit] AssessAffordability ← annualIncome={Income}, loanAmount={Loan}, type={Type}, monthlyPayment={Payment}",
+            annualIncome, loanAmount, loanType, monthlyPayment);
         var monthlyIncome = annualIncome / 12m;
         var paymentToIncomeRatio = Math.Round(monthlyPayment / monthlyIncome * 100, 2);
         var loanToIncomeRatio = Math.Round(loanAmount / annualIncome, 2);
@@ -103,7 +121,7 @@ public sealed class CreditAssessmentPlugin
 
         var affordable = paymentToIncomeRatio <= 35 && loanToIncomeRatio <= maxLtiRatio;
 
-        return JsonSerializer.Serialize(new
+        var result = JsonSerializer.Serialize(new
         {
             paymentToIncomePercent = paymentToIncomeRatio,
             loanToIncomeRatio,
@@ -113,5 +131,7 @@ public sealed class CreditAssessmentPlugin
                 ? "Loan amount is within affordable limits"
                 : "Loan amount may exceed safe affordability thresholds"
         });
+        logger.LogDebug("[PLUGIN:Credit] AssessAffordability → {Result}", result);
+        return result;
     }
 }

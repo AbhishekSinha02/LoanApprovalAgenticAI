@@ -1,10 +1,11 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 
 namespace LoanApproval.Agents.Plugins;
 
-public sealed class LoanDecisionPlugin
+public sealed class LoanDecisionPlugin(ILogger<LoanDecisionPlugin> logger)
 {
     [KernelFunction, Description("Compute a weighted overall score from individual agent scores.")]
     public string ComputeOverallScore(
@@ -13,6 +14,9 @@ public sealed class LoanDecisionPlugin
         [Description("Risk assessment score (0–100, lower = less risky)")] int riskScore,
         [Description("Compliance score (0–100)")] int complianceScore)
     {
+        logger.LogDebug("[PLUGIN:Decision] ComputeOverallScore ← doc={Doc}, credit={Credit}, risk={Risk}, compliance={Compliance}",
+            documentScore, creditScore, riskScore, complianceScore);
+
         // Convert risk score so higher = better, then weight each agent
         var invertedRisk = 100 - riskScore;
 
@@ -22,7 +26,7 @@ public sealed class LoanDecisionPlugin
             invertedRisk    * 0.30 +
             complianceScore * 0.15);
 
-        return JsonSerializer.Serialize(new
+        var result = JsonSerializer.Serialize(new
         {
             overallScore = weightedScore,
             breakdown = new
@@ -33,6 +37,8 @@ public sealed class LoanDecisionPlugin
                 complianceScore
             }
         });
+        logger.LogDebug("[PLUGIN:Decision] ComputeOverallScore → {Result}", result);
+        return result;
     }
 
     [KernelFunction, Description("Determine the final loan decision status from key underwriting metrics.")]
@@ -44,38 +50,61 @@ public sealed class LoanDecisionPlugin
         [Description("Whether identity/KYC checks passed")] bool kycPass,
         [Description("Risk level: Low, Medium, High, VeryHigh")] string riskLevel)
     {
+        logger.LogDebug("[PLUGIN:Decision] DetermineDecisionStatus ← overallScore={Score}, credit={Credit}, dti={DTI}%, compliance={Comp}, kyc={KYC}, risk={Risk}",
+            overallScore, creditScore, dtiRatio, compliancePass, kycPass, riskLevel);
+
         // Hard denials — policy floors that override the score
         if (!kycPass)
-            return JsonSerializer.Serialize(new
+        {
+            var r = JsonSerializer.Serialize(new
             {
                 status = "Rejected",
                 reason = "KYC/identity verification failed — mandatory policy requirement",
                 hardDenial = true
             });
+            logger.LogWarning("[PLUGIN:Decision] Hard denial — KYC failed");
+            logger.LogDebug("[PLUGIN:Decision] DetermineDecisionStatus → {Result}", r);
+            return r;
+        }
 
         if (!compliancePass)
-            return JsonSerializer.Serialize(new
+        {
+            var r = JsonSerializer.Serialize(new
             {
                 status = "Rejected",
                 reason = "Compliance check failed — regulatory requirement not met",
                 hardDenial = true
             });
+            logger.LogWarning("[PLUGIN:Decision] Hard denial — Compliance failed");
+            logger.LogDebug("[PLUGIN:Decision] DetermineDecisionStatus → {Result}", r);
+            return r;
+        }
 
         if (creditScore < 500)
-            return JsonSerializer.Serialize(new
+        {
+            var r = JsonSerializer.Serialize(new
             {
                 status = "Rejected",
                 reason = $"Credit score {creditScore} is below the 500-point policy minimum",
                 hardDenial = true
             });
+            logger.LogWarning("[PLUGIN:Decision] Hard denial — credit score {Score} < 500", creditScore);
+            logger.LogDebug("[PLUGIN:Decision] DetermineDecisionStatus → {Result}", r);
+            return r;
+        }
 
         if (dtiRatio > 50)
-            return JsonSerializer.Serialize(new
+        {
+            var r = JsonSerializer.Serialize(new
             {
                 status = "Rejected",
                 reason = $"DTI ratio {dtiRatio:F1}% exceeds the 50% hard ceiling",
                 hardDenial = true
             });
+            logger.LogWarning("[PLUGIN:Decision] Hard denial — DTI {DTI}% > 50%", dtiRatio);
+            logger.LogDebug("[PLUGIN:Decision] DetermineDecisionStatus → {Result}", r);
+            return r;
+        }
 
         // Score-based decision
         var (status, conditions) = (overallScore, riskLevel) switch
@@ -86,7 +115,10 @@ public sealed class LoanDecisionPlugin
             _ => ("Rejected", new List<string> { "Score below minimum approval threshold" })
         };
 
-        return JsonSerializer.Serialize(new { status, conditions, overallScore, hardDenial = false });
+        var result = JsonSerializer.Serialize(new { status, conditions, overallScore, hardDenial = false });
+        logger.LogInformation("[PLUGIN:Decision] DetermineDecisionStatus → status={Status}, score={Score}", status, overallScore);
+        logger.LogDebug("[PLUGIN:Decision] DetermineDecisionStatus → {Result}", result);
+        return result;
     }
 
     [KernelFunction, Description("Calculate the approved loan amount, potentially adjusted from the requested amount.")]
@@ -96,6 +128,9 @@ public sealed class LoanDecisionPlugin
         [Description("Debt-to-income ratio as a percentage")] decimal dtiRatio,
         [Description("Monthly income")] decimal monthlyIncome)
     {
+        logger.LogDebug("[PLUGIN:Decision] CalculateApprovedAmount ← requested={Requested}, score={Score}, dti={DTI}%, monthlyIncome={Income}",
+            requestedAmount, overallScore, dtiRatio, monthlyIncome);
+
         // Maximum monthly payment the applicant can safely carry
         var maxDtiAllowed = 43m;
         var maxPayment = monthlyIncome * (maxDtiAllowed / 100m);
@@ -111,12 +146,14 @@ public sealed class LoanDecisionPlugin
 
         approvedAmount = Math.Round(approvedAmount, 2);
 
-        return JsonSerializer.Serialize(new
+        var result = JsonSerializer.Serialize(new
         {
             requestedAmount,
             approvedAmount,
             adjustmentApplied = approvedAmount < requestedAmount,
             maxMonthlyPayment = Math.Round(maxPayment, 2)
         });
+        logger.LogDebug("[PLUGIN:Decision] CalculateApprovedAmount → {Result}", result);
+        return result;
     }
 }

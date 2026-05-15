@@ -19,7 +19,7 @@ public sealed class DocumentAnalysisPlugin(ILogger<DocumentAnalysisPlugin> logge
         [Description("Unique document identifier")] string documentId,
         [Description("Document type: PayStub, BankStatement, TaxReturn, Passport, DriversLicense, PropertyDeed, VehicleTitle, BusinessLicense")] string documentType)
     {
-        logger.LogInformation("Extracting data from document {DocumentId} of type {DocumentType}", documentId, documentType);
+        logger.LogDebug("[PLUGIN:Document] ExtractDocumentDataAsync ← documentId={Id}, type={Type}", documentId, documentType);
 
         // In production this calls Azure Document Intelligence prebuilt-layout / prebuilt-tax.us.w2 etc.
         // For the POC we simulate structured extraction results.
@@ -77,7 +77,9 @@ public sealed class DocumentAnalysisPlugin(ILogger<DocumentAnalysisPlugin> logge
             }
         };
 
-        return JsonSerializer.Serialize(new { documentId, documentType, extracted, extractedAt = DateTime.UtcNow });
+        var result = JsonSerializer.Serialize(new { documentId, documentType, extracted, extractedAt = DateTime.UtcNow });
+        logger.LogDebug("[PLUGIN:Document] ExtractDocumentDataAsync → {Result}", result);
+        return result;
     }
 
     [KernelFunction, Description("Verify a document's authenticity — checks for tampering indicators.")]
@@ -85,11 +87,11 @@ public sealed class DocumentAnalysisPlugin(ILogger<DocumentAnalysisPlugin> logge
         [Description("Unique document identifier")] string documentId,
         [Description("Document type")] string documentType)
     {
-        logger.LogInformation("Verifying authenticity of document {DocumentId}", documentId);
+        logger.LogDebug("[PLUGIN:Document] VerifyDocumentAuthenticityAsync ← documentId={Id}, type={Type}", documentId, documentType);
         await Task.Delay(30);
 
         // Simulate an authenticity check (production: AI-based forgery detection)
-        return JsonSerializer.Serialize(new
+        var authResult = JsonSerializer.Serialize(new
         {
             documentId,
             authentic = true,
@@ -98,6 +100,8 @@ public sealed class DocumentAnalysisPlugin(ILogger<DocumentAnalysisPlugin> logge
             metadataConsistent = true,
             verifiedAt = DateTime.UtcNow
         });
+        logger.LogDebug("[PLUGIN:Document] VerifyDocumentAuthenticityAsync → {Result}", authResult);
+        return authResult;
     }
 
     [KernelFunction, Description("Cross-reference extracted document data against applicant-provided information to find discrepancies.")]
@@ -106,8 +110,10 @@ public sealed class DocumentAnalysisPlugin(ILogger<DocumentAnalysisPlugin> logge
         [Description("Applicant-provided income (annual)")] decimal applicantStatedAnnualIncome,
         [Description("Applicant-stated employer name")] string applicantEmployerName)
     {
+        logger.LogDebug("[PLUGIN:Document] CrossReferenceApplicantData ← statedIncome={Income}, employer={Employer}",
+            applicantStatedAnnualIncome, applicantEmployerName);
+
         // In production this compares fields extracted from docs against what the applicant stated
-        // Here we compute a simple plausibility check
         decimal? extractedMonthlyGross = null;
 
         try
@@ -131,12 +137,14 @@ public sealed class DocumentAnalysisPlugin(ILogger<DocumentAnalysisPlugin> logge
                 discrepancies.Add($"Income discrepancy: stated ${applicantStatedAnnualIncome:N0}/yr vs doc-extracted ${annualizedExtracted:N0}/yr ({variance:P0} variance)");
         }
 
-        return JsonSerializer.Serialize(new
+        var result = JsonSerializer.Serialize(new
         {
             discrepanciesFound = discrepancies.Count > 0,
             discrepancies,
             crossReferenceScore = discrepancies.Count == 0 ? 100 : Math.Max(0, 100 - discrepancies.Count * 25),
             verifiedAt = DateTime.UtcNow
         });
+        logger.LogDebug("[PLUGIN:Document] CrossReferenceApplicantData → {Result}", result);
+        return result;
     }
 }

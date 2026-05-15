@@ -1,12 +1,13 @@
 using System.Text.Json;
 using FluentAssertions;
 using LoanApproval.Agents.Plugins;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LoanApproval.Tests.Unit.Plugins;
 
 public class CreditAssessmentPluginTests
 {
-    private readonly CreditAssessmentPlugin _plugin = new();
+    private readonly CreditAssessmentPlugin _plugin = new(NullLogger<CreditAssessmentPlugin>.Instance);
 
     [Theory]
     [InlineData(850, "Exceptional")]

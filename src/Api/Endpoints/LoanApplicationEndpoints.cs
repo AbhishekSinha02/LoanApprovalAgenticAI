@@ -16,7 +16,8 @@ public static class LoanApplicationEndpoints
             .WithSummary("Submit a loan application for AI-powered underwriting")
             .Produces<LoanDecision>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
-            .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError);
+            .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError)
+            .WithRequestTimeout("LoanApproval");
 
         return app;
     }
@@ -45,12 +46,30 @@ public static class LoanApplicationEndpoints
             application.LoanDetails.RequestedAmount,
             application.LoanDetails.LoanType);
 
-        var decision = await orchestrator.ProcessApplicationAsync(application, cancellationToken);
+        try
+        {
+            var decision = await orchestrator.ProcessApplicationAsync(application, cancellationToken);
 
-        logger.LogInformation("Application {ApplicationId} decided: {Status} (score: {Score})",
-            application.ApplicationId, decision.Status, decision.OverallScore);
+            logger.LogInformation("Application {ApplicationId} decided: {Status} (score: {Score})",
+                application.ApplicationId, decision.Status, decision.OverallScore);
 
-        return Results.Ok(decision);
+            return Results.Ok(decision);
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogWarning("Application {ApplicationId} request was cancelled by client or server timeout",
+                application.ApplicationId);
+            return Results.Problem(
+                "The request timed out. Your application has been received and will be reviewed manually.",
+                statusCode: 503, title: "Service Unavailable");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unexpected error processing application {ApplicationId}", application.ApplicationId);
+            return Results.Problem(
+                "Your application has been received. A loan officer will contact you within 2 business days.",
+                statusCode: 503, title: "Service Unavailable");
+        }
     }
 }
 
