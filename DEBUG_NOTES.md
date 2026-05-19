@@ -1,5 +1,15 @@
 # Debug Notes — Loan Approval Agentic AI
 
+## 5 Debug Challenges Faced
+
+1. **`qwen3-vl:235b` not starting** — mistook it for hardware limit; real cause was Ollama cloud cache timeout blocking startup (`ollama.com:443` unreachable).
+2. **`ollama` command not found** — Ollama tray app wasn't running; CLI only works when background app is active.
+3. **503 timeout on LoanOfficer** — 5 sequential agent calls on CPU exceeded request timeout; LoanOfficer prompt is heaviest (carries all 4 prior reports).
+4. **`bin/` and `obj/` tracked by git** — artifacts were committed before `.gitignore` was effective; required `git rm -r --cached` to untrack.
+5. **Ollama on 100% CPU** — no GPU detected; running `llama3.1` on CPU is 10-20x slower, causing per-agent delays of 1min+.
+
+---
+
 ## Ollama Setup
 
 | Command | Purpose |
