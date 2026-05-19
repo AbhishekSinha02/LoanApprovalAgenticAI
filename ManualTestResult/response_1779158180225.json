@@ -1,0 +1,100 @@
+{
+  "applicationId": "d672d71b-c59c-4fe3-a7be-ebf70f356b1d",
+  "status": "Approved",
+  "reasoning": "The loan application is deemed low-risk and compliant. Credit assessment indicates a Very Good credit score, excellent debt-to-income ratio, and the loan amount is within affordable limits.",
+  "approvedAmount": 25000,
+  "interestRate": 8,
+  "termMonths": 60,
+  "conditions": [
+    "Very good credit score",
+    "Excellent debt-to-income ratio"
+  ],
+  "agentReports": [
+    {
+      "agentName": "DocumentAnalyst",
+      "summary": "No documents submitted for analysis.",
+      "passed": true,
+      "score": 100,
+      "findings": [
+        "Assessment based on stated information only"
+      ],
+      "concerns": [],
+      "metadata": {},
+      "completedAt": "2026-05-19T02:29:49.3920539Z"
+    },
+    {
+      "agentName": "CreditAnalyst",
+      "summary": "The credit assessment indicates a Very Good credit score, excellent debt-to-income ratio, and the loan amount is within affordable limits.",
+      "passed": true,
+      "score": 95,
+      "findings": [
+        "Very good credit score",
+        "Excellent debt-to-income ratio"
+      ],
+      "concerns": [],
+      "metadata": {
+        "creditScoreCategory": "Very Good",
+        "dtiRatio": 12.09,
+        "monthlyPayment": 506.91,
+        "affordable": true
+      },
+      "completedAt": "2026-05-19T02:31:22.7875175Z"
+    },
+    {
+      "agentName": "RiskAnalyst",
+      "summary": "The loan application is deemed low-risk based on the provided metrics.",
+      "passed": true,
+      "score": 7,
+      "findings": [
+        "Unsecured loan with no collateral",
+        "Excellent debt-to-income ratio"
+      ],
+      "concerns": [],
+      "metadata": {
+        "riskLevel": "Low",
+        "suggestedRate": 8,
+        "ltvRatio": 0
+      },
+      "completedAt": "2026-05-19T02:32:53.6511304Z"
+    },
+    {
+      "agentName": "ComplianceOfficer",
+      "summary": "The loan application has passed all compliance checks with no concerns or findings.",
+      "passed": true,
+      "score": 100,
+      "findings": [
+        "All compliance checks passed"
+      ],
+      "concerns": [],
+      "metadata": {
+        "kycPass": true,
+        "amlPass": true,
+        "ecoaCompliant": true,
+        "hmdaCompliant": true,
+        "eligibilityPass": true
+      },
+      "completedAt": "2026-05-19T02:34:27.3137128Z"
+    },
+    {
+      "agentName": "LoanOfficer",
+      "summary": "The loan application is deemed low-risk and compliant. Credit assessment indicates a Very Good credit score, excellent debt-to-income ratio, and the loan amount is within affordable limits.",
+      "passed": true,
+      "score": 92,
+      "findings": [
+        "Very good credit score",
+        "Excellent debt-to-income ratio"
+      ],
+      "concerns": [],
+      "metadata": {
+        "decisionStatus": "Approved",
+        "approvedAmount": 25000,
+        "interestRate": 8,
+        "riskLevel": "Low"
+      },
+      "completedAt": "2026-05-19T02:36:19.7019974Z"
+    }
+  ],
+  "overallScore": 92,
+  "riskLevel": "Low",
+  "decidedAt": "2026-05-19T02:36:19.7208798Z"
+}
