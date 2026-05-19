@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build *)",
+      "Bash(tasklist *)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Get-ChildItem *)",
+      "Bash(dotnet list *)",
+      "Bash(dotnet add *)",
+      "Bash(git check-ignore *)",
+      "PowerShell(Get-Content .gitignore -ErrorAction SilentlyContinue | Select-Object -First 10; if \\(-not \\(Test-Path .gitignore\\)\\) { \"NO_GITIGNORE\" })",
+      "PowerShell(Stop-Process *)",
+      "Bash(ollama list *)",
+      "PowerShell(ollama list *)",
+      "PowerShell(Invoke-RestMethod \"http://localhost:11434/api/tags\" | ConvertTo-Json -Depth 5)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(dotnet run *)",
+      "Bash(echo \"Started PID $!\")",
+      "Bash(New-Item -ItemType Directory -Force -Path logs)",
+      "Bash(Out-Null)",
+      "Bash(echo \"Background PID $!\")",
+      "PowerShell(New-Item *)",
+      "PowerShell(Start-Process -FilePath \"dotnet\" -ArgumentList \"run\",\"--project\",\"src/Api\",\"--no-build\" -WorkingDirectory \"C:\\\\aiPrj\\\\LoanApprovalAgenticAI\" -RedirectStandardOutput \"logs\\\\startup-test.log\" -RedirectStandardError \"logs\\\\startup-test-err.log\" -NoNewWindow -PassThru | Select-Object Id)",
+      "PowerShell(Receive-Job *)",
+      "Bash(echo \"PID=$!\")",
+      "Bash(curl *)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(awk *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  }
+}

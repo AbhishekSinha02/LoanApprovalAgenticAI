@@ -4,7 +4,12 @@ obj/
 
 # Log files
 logs/
+logs2/
 *.log
+
+# Build cache / tooling artifacts
+*.lscache
+commands_history.txt
 
 # Local secrets / environment
 .env
