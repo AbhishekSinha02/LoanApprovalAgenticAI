@@ -124,6 +124,44 @@ ollama ps   # if shows 100% CPU → GPU not active → much slower
 
 ---
 
+## Agent Model Strategy (2026-05-19)
+
+| Agent | Recommended Model | Hosting | Rating |
+|---|---|---|---|
+| **DocumentAnalyst** | Llama 3.1 7B | AKS self-hosted | ⭐⭐⭐ — extraction task, no deep reasoning |
+| **CreditAnalyst** | Llama 3.1 8B / Mistral | AKS self-hosted | ⭐⭐⭐ — structured scoring, rules-based |
+| **RiskAnalyst** | Llama 3.1 8B or GPT-4o-mini | AKS / Azure OpenAI | ⭐⭐⭐⭐ — needs some reasoning; borderline |
+| **ComplianceOfficer** | GPT-4o-mini | Azure OpenAI | ⭐⭐⭐⭐ — legal/regulatory nuance, llama risky |
+| **LoanOfficer** | GPT-4o | Azure OpenAI | ⭐⭐⭐⭐⭐ — final verdict, highest stakes |
+
+**Pattern:** Llama on AKS for agents 1-2 (cheap, high volume). GPT-4o-mini for agent 3-4. GPT-4o only for LoanOfficer final decision.
+**Why:** Reduces Azure OpenAI cost ~60-70% while keeping accuracy where it matters most.
+
+---
+
+## Claude Code — Token & Session Limit Tips (2026-05-19)
+
+**What Claude Code does to minimize usage:**
+- Prompt caching — CLAUDE.md/system prompt cached (5-min TTL), cheaper on cache hits
+- Context compaction — auto-summarizes old conversation near context limit
+- Tool results trimmed — large file reads/grep outputs truncated before sending to model
+
+**What it does NOT do:**
+- Every tool call (Read, Edit, Grep, Bash) adds tokens — no batching
+- Long conversations accumulate fast — history grows each turn
+- No automatic model downgrade — always uses selected model (Sonnet 4.6)
+
+**Practical tips for this project:**
+| Command | Purpose |
+|---------|---------|
+| `/clear` | Reset context between unrelated tasks |
+| `/compact` | Manually summarize before context gets too large |
+| Use Grep first | Find specific lines before reading whole files |
+| Spawn Explore subagent | Isolates broad search token usage from main context |
+| Short focused sessions | Beat one long session for limit efficiency |
+
+---
+
 ## Git — Repo Cleanup Done (2026-05-19)
 
 ```cmd
