@@ -162,6 +162,45 @@ ollama ps   # if shows 100% CPU → GPU not active → much slower
 
 ---
 
+## Session Summary (2026-05-19)
+
+### Topics Covered
+
+**Architecture & Design:**
+- Clarified why `.env.local` and `appsettings.Development.json` coexist (secrets vs non-secret config)
+- Confirmed Azurite has no actual code dependency — only docker-compose + docs reference it
+- Identified line 67 of `LoanApprovalOrchestrator.cs` as the single LLM call point for all 5 agents
+- Confirmed all plugins are pure deterministic math/rules — no LLM calls inside them
+
+**Model Strategy:**
+- Discussed why Ollama cannot be used in production (no SLA, no scaling, no security)
+- Confirmed Llama CAN be deployed on AKS GPU nodes for enterprise-grade self-hosting
+- Defined hybrid model strategy: Llama (agents 1-2) → GPT-4o-mini (agents 3-4) → GPT-4o (LoanOfficer)
+- Confirmed GPT-4o cannot be self-hosted — must use Azure OpenAI API with Managed Identity
+
+**Cost Analysis:**
+- 1M requests: All GPT-4o ~$39k → Hybrid ~$15.3k → saving ~$23.7k (60-70%)
+- 10M requests annual: saving ~$237,000
+- Extended 10-agent hybrid (8 AKS + 2 GPT): net annual saving ~$584,000
+- AKS GPU infra fixed cost (~$18k/yr) amortised — negligible at scale
+
+**RAG Planning:**
+- Designed RAG integration per plugin (5 separate Azure AI Search indexes)
+- Compliance RAG identified as most critical (CFPB, ECOA, HMDA, AML/KYC)
+- LoanOfficer RAG = past precedent decisions
+
+**Claude Code Tips:**
+- Prompt caching (5-min TTL), context compaction, tool result trimming
+- Use `/clear`, `/compact`, Grep-first pattern to conserve session limits
+
+**Deliverables Created:**
+- `Presentation/LoanApprovalAgenticAI_Presentation.pptx` — 20-slide deck
+- `Presentation/Claude_NextVersion.md` — extended CLAUDE.md for v2/v3
+- `DEBUG_NOTES.md` — updated with agent strategy, cost tables, Claude tips
+- All committed and pushed to GitHub (`398cee2`)
+
+---
+
 ## Git — Repo Cleanup Done (2026-05-19)
 
 ```cmd
